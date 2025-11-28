@@ -38,3 +38,7 @@ wheels/
 *.db
 *.sqlite
 *.sqlite3
+
+
+# custom
+README_Local.md
