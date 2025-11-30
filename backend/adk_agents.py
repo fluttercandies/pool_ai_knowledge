@@ -9,6 +9,7 @@ import json
 import os
 from google.adk.agents import Agent
 from google.adk.tools import google_search
+from knowledge_base_agent import create_knowledge_base_agent
 
 
 # ==================== Custom Tools 自定义工具 ====================
@@ -239,6 +240,7 @@ AGENT_REGISTRY: Dict[str, Agent] = {
     "text": create_text_processing_agent(),
     "search": create_search_agent(),
     "multi": create_multi_tool_agent(),
+    "knowledge": create_knowledge_base_agent(),  # Knowledge base agent / 知识库代理
 }
 
 

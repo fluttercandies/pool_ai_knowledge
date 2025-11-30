@@ -1,0 +1,80 @@
+{
+  "posts": [
+    {
+      "id": "post_001",
+      "title": "Python 虚拟环境使用指南",
+      "content": "Python 虚拟环境是隔离项目依赖的重要工具。使用 python -m venv venv 创建虚拟环境，使用 source venv/bin/activate 激活。虚拟环境可以避免不同项目之间的依赖冲突。",
+      "tags": [
+        "Python",
+        "虚拟环境",
+        "开发工具"
+      ],
+      "created_at": null
+    },
+    {
+      "id": "post_002",
+      "title": "FastAPI 快速入门",
+      "content": "FastAPI 是一个现代、快速的 Web 框架。它基于 Python 类型提示，自动生成 API 文档。使用 @app.get() 装饰器定义路由，支持异步请求处理。",
+      "tags": [
+        "FastAPI",
+        "Python",
+        "Web开发"
+      ],
+      "created_at": null
+    },
+    {
+      "id": "post_003",
+      "title": "Google ADK 代理开发",
+      "content": "Google ADK (Agent Development Kit) 是用于构建 AI 代理的框架。它支持自定义工具、插件和多代理系统。使用 Agent 类创建代理，通过 Runner 运行代理。",
+      "tags": [
+        "Google ADK",
+        "AI",
+        "代理开发"
+      ],
+      "created_at": null
+    },
+    {
+      "id": "d606bd83-2074-4bac-b197-3bc9e7bd5fb5",
+      "title": "Python 虚拟环境指南",
+      "content": "使用 python -m venv venv 创建虚拟环境...",
+      "tags": [
+        "Python",
+        "虚拟环境"
+      ],
+      "created_at": null
+    },
+    {
+      "id": "8321878e-87da-4ce0-b36d-d6f6c68fc75c",
+      "title": "Python 虚拟环境最佳实践",
+      "content": "使用虚拟环境可以隔离项目依赖。推荐使用 python -m venv venv 创建，使用 source venv/bin/activate 激活。这样可以避免不同项目之间的包冲突。",
+      "tags": [
+        "Python",
+        "虚拟环境",
+        "开发"
+      ],
+      "created_at": null
+    },
+    {
+      "id": "7f6128df-77b3-439a-b9a3-7362c3475f5a",
+      "title": "FastAPI 路由和中间件",
+      "content": "FastAPI 使用装饰器定义路由，支持路径参数和查询参数。可以使用中间件处理请求和响应。异步路由使用 async def 定义。",
+      "tags": [
+        "FastAPI",
+        "Web开发",
+        "Python"
+      ],
+      "created_at": null
+    },
+    {
+      "id": "c4937bb2-0644-4b50-9016-3351cba1c0d6",
+      "title": "Google ADK 工具开发",
+      "content": "在 Google ADK 中，可以创建自定义工具函数。工具函数会被自动转换为代理可用的工具。使用 @tool 装饰器或直接定义函数即可。",
+      "tags": [
+        "Google ADK",
+        "AI",
+        "工具开发"
+      ],
+      "created_at": null
+    }
+  ]
+}
