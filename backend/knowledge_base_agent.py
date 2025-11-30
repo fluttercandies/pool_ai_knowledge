@@ -32,7 +32,7 @@ except ImportError:
         RAG_AVAILABLE = True
     except ImportError:
         RAG_AVAILABLE = False
-        print("Warning: LangChain with OpenAI embeddings not installed. Using keyword matching instead.")
+        print("Warning: LangChain with OpenAI embeddings not installed. RAG functionality will not be available.")
 
 from google.adk.agents import Agent
 from google.adk.tools import BaseTool
@@ -66,10 +66,11 @@ class KnowledgeBase:
     RAG-based knowledge base for posts with vector embeddings
     
     This implementation uses:
-    1. LangChain with HuggingFace embeddings for generating embeddings
+    1. LangChain with OpenAI embeddings for generating embeddings
     2. FAISS vector store for efficient similarity search
-    3. Keyword matching as fallback
+    3. Requires OPENAI_API_KEY environment variable
     
+    RAG is mandatory - keyword matching fallback is not used.
     In production, you might want to use a vector database like Chroma, Pinecone, or Vertex AI Vector Search
     """
     
@@ -95,15 +96,17 @@ class KnowledgeBase:
                 # Requires OPENAI_API_KEY environment variable
                 openai_api_key = os.getenv('OPENAI_API_KEY')
                 if not openai_api_key:
-                    print("Warning: OPENAI_API_KEY not found in environment. RAG disabled. Using keyword matching.")
-                    print("To enable RAG, set OPENAI_API_KEY in your .env file.")
-                    self.use_rag = False
-                else:
-                    self.embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-                    print("RAG enabled: Using LangChain with OpenAI embeddings for semantic search")
+                    raise ValueError(
+                        "OPENAI_API_KEY not found in environment. RAG requires OPENAI_API_KEY. "
+                        "Please set OPENAI_API_KEY in your .env file."
+                    )
+                self.embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+                print("RAG enabled: Using LangChain with OpenAI embeddings for semantic search")
             except Exception as e:
-                print(f"Failed to load embedding model: {e}. Falling back to keyword matching.")
-                self.use_rag = False
+                raise RuntimeError(
+                    f"Failed to initialize RAG: {e}. "
+                    "RAG is required for this knowledge base. Please ensure OPENAI_API_KEY is set correctly."
+                ) from e
         
         self.load_posts()
         
@@ -147,7 +150,7 @@ class KnowledgeBase:
     
     def search_posts(self, query: str, top_k: int = 3) -> List[SearchResult]:
         """
-        Search posts using RAG (vector embeddings) or keyword matching
+        Search posts using RAG (vector embeddings)
         
         Args:
             query: Search query
@@ -155,11 +158,20 @@ class KnowledgeBase:
         
         Returns:
             List of search results with relevance scores
+        
+        Raises:
+            RuntimeError: If RAG is not properly initialized
         """
-        if self.use_rag and self.vector_store:
-            return self._search_with_rag(query, top_k)
-        else:
-            return self._search_with_keywords(query, top_k)
+        if not self.use_rag:
+            raise RuntimeError(
+                "RAG is not enabled. This knowledge base requires RAG with OPENAI_API_KEY. "
+                "Please ensure OPENAI_API_KEY is set in your environment."
+            )
+        if not self.vector_store:
+            raise RuntimeError(
+                "Vector store is not initialized. RAG requires a properly initialized vector store."
+            )
+        return self._search_with_rag(query, top_k)
     
     def _search_with_rag(self, query: str, top_k: int = 3) -> List[SearchResult]:
         """
@@ -203,49 +215,8 @@ class KnowledgeBase:
             
             return results
         except Exception as e:
-            print(f"Error in RAG search: {e}. Falling back to keyword matching.")
-            return self._search_with_keywords(query, top_k)
+            raise RuntimeError(f"RAG search failed: {e}. Please ensure RAG is properly configured.") from e
     
-    def _search_with_keywords(self, query: str, top_k: int = 3) -> List[SearchResult]:
-        """
-        Fallback keyword-based search
-        """
-        query_lower = query.lower()
-        query_words = set(query_lower.split())
-        
-        results = []
-        
-        for post_id, post in self.posts.items():
-            # Calculate relevance score
-            title_lower = post.title.lower()
-            content_lower = post.content.lower()
-            
-            # Count matches in title (weighted higher)
-            title_matches = sum(1 for word in query_words if word in title_lower)
-            content_matches = sum(1 for word in query_words if word in content_lower)
-            
-            # Simple scoring: title matches count more
-            score = title_matches * 2 + content_matches
-            
-            if score > 0:
-                # Find a snippet of matched content
-                matched_content = self._extract_relevant_snippet(content_lower, query_words, max_length=200)
-                
-                # Generate reason
-                reason = self._generate_reason(post, query_words, title_matches, content_matches)
-                
-                results.append(SearchResult(
-                    post_id=post.id,
-                    title=post.title,
-                    relevance_score=score,
-                    matched_content=matched_content,
-                    reason=reason
-                ))
-        
-        # Sort by relevance score
-        results.sort(key=lambda x: x.relevance_score, reverse=True)
-        
-        return results[:top_k]
     
     def _generate_all_embeddings(self):
         """Generate embeddings and create vector store for all posts"""
@@ -308,37 +279,6 @@ class KnowledgeBase:
             return content[:max_length] + "..."
         return content
     
-    def _extract_relevant_snippet(self, content: str, query_words: set, max_length: int = 200) -> str:
-        """Extract a relevant snippet from content"""
-        # Find first sentence containing query words
-        sentences = content.split('.')
-        for sentence in sentences:
-            if any(word in sentence.lower() for word in query_words):
-                snippet = sentence.strip()
-                if len(snippet) > max_length:
-                    snippet = snippet[:max_length] + "..."
-                return snippet
-        
-        # If no sentence matches, return beginning
-        return content[:max_length] + "..." if len(content) > max_length else content
-    
-    def _generate_reason(self, post: Post, query_words: set, title_matches: int, content_matches: int) -> str:
-        """Generate reason why post is relevant"""
-        reasons = []
-        
-        if title_matches > 0:
-            matched_words = [word for word in query_words if word in post.title.lower()]
-            reasons.append(f"Title contains keywords: {', '.join(matched_words)}")
-        
-        if content_matches > 0:
-            reasons.append(f"Content contains {content_matches} matching keywords")
-        
-        if post.tags:
-            matched_tags = [tag for tag in post.tags if any(word in tag.lower() for word in query_words)]
-            if matched_tags:
-                reasons.append(f"Tags match: {', '.join(matched_tags)}")
-        
-        return "; ".join(reasons) if reasons else "Partially relevant content"
 
 
 # ==================== ADK Tool for Knowledge Base Search ====================
