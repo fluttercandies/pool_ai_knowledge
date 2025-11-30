@@ -14,14 +14,17 @@ def create_default_admin():
         # Check if admin exists
         admin = db.query(AdminUser).filter(AdminUser.username == "admin").first()
         if admin:
-            print("Default admin user already exists")
+            print("Default admin user already exists. Updating password...")
+            admin.password_hash = get_password_hash("123456")
+            db.commit()
+            print("Default admin user password updated to: 123456")
             return
         
         # Create default admin
         admin = AdminUser(
             username="admin",
             email="admin@example.com",
-            password_hash=get_password_hash("admin123"),  # Change this in production!
+            password_hash=get_password_hash("123456"),
             is_super_admin=True,
             is_active=True
         )
@@ -29,7 +32,7 @@ def create_default_admin():
         db.commit()
         print("Default admin user created:")
         print("  Username: admin")
-        print("  Password: admin123")
+        print("  Password: 123456")
         print("  WARNING: Change the default password in production!")
     except Exception as e:
         print(f"Error creating default admin: {e}")
