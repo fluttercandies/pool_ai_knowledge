@@ -93,10 +93,11 @@ async def example_query_knowledge_base():
     
     # Test queries / 测试查询
     queries = [
-        "如何使用 Python 虚拟环境？",
-        "FastAPI 如何定义路由？",
-        "如何创建 Google ADK 工具？",
-        "如何学习机器学习？"  # This should return "not found" / 这应该返回"未找到"
+        # "如何使用 Python 虚拟环境？",
+        # "FastAPI 如何定义路由？",
+        "FastAPI 如何使用中间件？",
+        # "如何创建 Google ADK 工具？",
+        # "如何学习机器学习？"  # This should return "not found" / 这应该返回"未找到"
     ]
     
     for query in queries:
@@ -158,7 +159,8 @@ async def example_direct_search():
     
     from knowledge_base_agent import search_knowledge_base
     
-    query = "我想了解有关FastApi中间件的内容"
+    query = "FastAPI 如何定义路由？"
+    # query = "我想了解有关FastApi中间件的内容"
     result = search_knowledge_base(query, top_k=2)
     
     print(f"\nQuery / 查询: {query}")
@@ -187,10 +189,10 @@ async def run_all_examples():
     # await example_add_posts()
     
     # Example 2: Direct search / 示例 2：直接搜索
-    await example_direct_search()
+    # await example_direct_search()
     
     # Example 3: Query with agent / 示例 3：使用代理查询
-    # await example_query_knowledge_base()
+    await example_query_knowledge_base()
     
     print("\n" + "=" * 60)
     print("All examples completed! / 所有示例完成！")

@@ -1,15 +1,10 @@
 """
 Knowledge Base Agent with RAG (Retrieval-Augmented Generation)
-基于 RAG（检索增强生成）的知识库代理
 
 This module implements a knowledge base agent that can:
 - Search through posts/articles
 - Answer questions based on retrieved content
 - Show related posts and reasoning
-此模块实现了一个知识库代理，可以：
-- 搜索文章/帖子
-- 基于检索到的内容回答问题
-- 显示相关文章和推理过程
 """
 
 from typing import Dict, List, Optional, Tuple
@@ -17,19 +12,37 @@ import json
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import numpy as np
 
-# Load environment variables / 加载环境变量
+# Load environment variables
 load_dotenv()
+
+# Try to import LangChain for RAG
+try:
+    from langchain.embeddings import HuggingFaceEmbeddings
+    from langchain.vectorstores import FAISS
+    from langchain.schema import Document
+    RAG_AVAILABLE = True
+except ImportError:
+    try:
+        # Try alternative import paths for newer LangChain versions
+        from langchain_community.embeddings import HuggingFaceEmbeddings
+        from langchain_community.vectorstores import FAISS
+        from langchain_core.documents import Document
+        RAG_AVAILABLE = True
+    except ImportError:
+        RAG_AVAILABLE = False
+        print("Warning: LangChain not installed. Using keyword matching instead.")
 
 from google.adk.agents import Agent
 from google.adk.tools import BaseTool
 from pydantic import BaseModel, Field
 
 
-# ==================== Data Models 数据模型 ====================
+# ==================== Data Models ====================
 
 class Post(BaseModel):
-    """Post/Article model / 文章/帖子模型"""
+    """Post/Article model"""
     id: str
     title: str
     content: str
@@ -38,36 +51,65 @@ class Post(BaseModel):
 
 
 class SearchResult(BaseModel):
-    """Search result model / 搜索结果模型"""
+    """Search result model"""
     post_id: str
     title: str
     relevance_score: float
     matched_content: str
-    reason: str  # Why this post is relevant / 为什么这篇文章相关
+    reason: str  # Why this post is relevant
 
 
-# ==================== Knowledge Base Storage 知识库存储 ====================
+# ==================== Knowledge Base Storage ====================
 
 class KnowledgeBase:
     """
-    Simple in-memory knowledge base for posts / 简单的内存知识库用于存储文章
+    RAG-based knowledge base for posts with vector embeddings
+    
+    This implementation uses:
+    1. LangChain with HuggingFace embeddings for generating embeddings
+    2. FAISS vector store for efficient similarity search
+    3. Keyword matching as fallback
+    
     In production, you might want to use a vector database like Chroma, Pinecone, or Vertex AI Vector Search
-    在生产环境中，你可能想使用向量数据库如 Chroma、Pinecone 或 Vertex AI Vector Search
     """
     
-    def __init__(self, storage_path: str = "knowledge_base.json"):
+    def __init__(self, storage_path: str = "knowledge_base.json", use_rag: bool = True):
         """
-        Initialize knowledge base / 初始化知识库
+        Initialize knowledge base
         
         Args:
-            storage_path: Path to JSON file storing posts / 存储文章的 JSON 文件路径
+            storage_path: Path to JSON file storing posts
+            use_rag: Whether to use RAG with vector embeddings
         """
         self.storage_path = storage_path
         self.posts: Dict[str, Post] = {}
+        self.use_rag = use_rag and RAG_AVAILABLE
+        
+        # Initialize embedding model and vector store if RAG is enabled
+        self.embeddings = None
+        self.vector_store = None
+        
+        if self.use_rag:
+            try:
+                # Use English-only embedding model optimized for semantic search
+                # Using HuggingFaceEmbeddings which can work without torch in some cases
+                self.embeddings = HuggingFaceEmbeddings(
+                    model_name='all-MiniLM-L6-v2',
+                    model_kwargs={'device': 'cpu'}  # Use CPU to avoid torch GPU issues
+                )
+                print("RAG enabled: Using LangChain with HuggingFace embeddings for semantic search")
+            except Exception as e:
+                print(f"Failed to load embedding model: {e}. Falling back to keyword matching.")
+                self.use_rag = False
+        
         self.load_posts()
+        
+        # Generate embeddings for existing posts
+        if self.use_rag:
+            self._generate_all_embeddings()
     
     def load_posts(self):
-        """Load posts from storage / 从存储加载文章"""
+        """Load posts from storage"""
         if os.path.exists(self.storage_path):
             try:
                 with open(self.storage_path, 'r', encoding='utf-8') as f:
@@ -80,7 +122,7 @@ class KnowledgeBase:
                 print(f"Error loading posts: {e}")
     
     def save_posts(self):
-        """Save posts to storage / 保存文章到存储"""
+        """Save posts to storage"""
         try:
             data = {
                 'posts': [post.model_dump() for post in self.posts.values()]
@@ -92,20 +134,78 @@ class KnowledgeBase:
             print(f"Error saving posts: {e}")
     
     def add_post(self, post: Post):
-        """Add a new post / 添加新文章"""
+        """Add a new post"""
         self.posts[post.id] = post
         self.save_posts()
+        
+        # Add to vector store if RAG is enabled
+        if self.use_rag and self.embeddings:
+            self._add_post_to_vector_store(post)
     
     def search_posts(self, query: str, top_k: int = 3) -> List[SearchResult]:
         """
-        Search posts by keyword matching / 通过关键词匹配搜索文章
+        Search posts using RAG (vector embeddings) or keyword matching
         
         Args:
-            query: Search query / 搜索查询
-            top_k: Number of results to return / 返回结果数量
+            query: Search query
+            top_k: Number of results to return
         
         Returns:
-            List of search results with relevance scores / 带相关性分数的搜索结果列表
+            List of search results with relevance scores
+        """
+        if self.use_rag and self.vector_store:
+            return self._search_with_rag(query, top_k)
+        else:
+            return self._search_with_keywords(query, top_k)
+    
+    def _search_with_rag(self, query: str, top_k: int = 3) -> List[SearchResult]:
+        """
+        RAG-based search using LangChain FAISS vector store
+        
+        This is the core RAG implementation:
+        1. Use FAISS similarity search to find relevant documents
+        2. Extract post information from search results
+        3. Return top-k most similar posts
+        """
+        try:
+            # Perform similarity search using FAISS
+            docs_with_scores = self.vector_store.similarity_search_with_score(query, k=top_k)
+            
+            results = []
+            for doc, score in docs_with_scores:
+                # Extract post_id from document metadata
+                post_id = doc.metadata.get('post_id')
+                if post_id and post_id in self.posts:
+                    post = self.posts[post_id]
+                    
+                    # Convert distance to similarity score (lower distance = higher similarity)
+                    # FAISS returns distance, so we convert it to similarity
+                    similarity_score = 1.0 / (1.0 + float(score)) if score > 0 else 1.0
+                    
+                    # Extract relevant snippet
+                    matched_content = self._extract_relevant_snippet_semantic(post.content, query, max_length=200)
+                    
+                    # Generate reason based on similarity
+                    reason = f"Semantic similarity: {similarity_score:.3f}"
+                    if post.tags:
+                        reason += f"; Tags: {', '.join(post.tags)}"
+                    
+                    results.append(SearchResult(
+                        post_id=post.id,
+                        title=post.title,
+                        relevance_score=similarity_score,
+                        matched_content=matched_content,
+                        reason=reason
+                    ))
+            
+            return results
+        except Exception as e:
+            print(f"Error in RAG search: {e}. Falling back to keyword matching.")
+            return self._search_with_keywords(query, top_k)
+    
+    def _search_with_keywords(self, query: str, top_k: int = 3) -> List[SearchResult]:
+        """
+        Fallback keyword-based search
         """
         query_lower = query.lower()
         query_words = set(query_lower.split())
@@ -113,22 +213,22 @@ class KnowledgeBase:
         results = []
         
         for post_id, post in self.posts.items():
-            # Calculate relevance score / 计算相关性分数
+            # Calculate relevance score
             title_lower = post.title.lower()
             content_lower = post.content.lower()
             
-            # Count matches in title (weighted higher) / 统计标题中的匹配（权重更高）
+            # Count matches in title (weighted higher)
             title_matches = sum(1 for word in query_words if word in title_lower)
             content_matches = sum(1 for word in query_words if word in content_lower)
             
-            # Simple scoring: title matches count more / 简单评分：标题匹配权重更高
+            # Simple scoring: title matches count more
             score = title_matches * 2 + content_matches
             
             if score > 0:
-                # Find a snippet of matched content / 找到匹配内容的片段
+                # Find a snippet of matched content
                 matched_content = self._extract_relevant_snippet(content_lower, query_words, max_length=200)
                 
-                # Generate reason / 生成原因
+                # Generate reason
                 reason = self._generate_reason(post, query_words, title_matches, content_matches)
                 
                 results.append(SearchResult(
@@ -139,14 +239,75 @@ class KnowledgeBase:
                     reason=reason
                 ))
         
-        # Sort by relevance score / 按相关性分数排序
+        # Sort by relevance score
         results.sort(key=lambda x: x.relevance_score, reverse=True)
         
         return results[:top_k]
     
+    def _generate_all_embeddings(self):
+        """Generate embeddings and create vector store for all posts"""
+        if not self.embeddings:
+            return
+        
+        print("Generating embeddings for all posts using LangChain...")
+        
+        # Create documents from posts
+        documents = []
+        for post_id, post in self.posts.items():
+            # Combine title and content for embedding
+            text = f"{post.title}. {post.content}"
+            doc = Document(
+                page_content=text,
+                metadata={
+                    'post_id': post.id,
+                    'title': post.title,
+                    'tags': ', '.join(post.tags) if post.tags else ''
+                }
+            )
+            documents.append(doc)
+        
+        if documents:
+            try:
+                # Create FAISS vector store from documents
+                self.vector_store = FAISS.from_documents(documents, self.embeddings)
+                print(f"Created vector store with {len(documents)} posts")
+            except Exception as e:
+                print(f"Failed to create vector store: {e}")
+                self.use_rag = False
+                self.vector_store = None
+    
+    def _add_post_to_vector_store(self, post: Post):
+        """Add a single post to the vector store"""
+        if not self.embeddings or not self.vector_store:
+            return
+        
+        try:
+            # Create document from post
+            text = f"{post.title}. {post.content}"
+            doc = Document(
+                page_content=text,
+                metadata={
+                    'post_id': post.id,
+                    'title': post.title,
+                    'tags': ', '.join(post.tags) if post.tags else ''
+                }
+            )
+            # Add document to existing vector store
+            self.vector_store.add_documents([doc])
+        except Exception as e:
+            print(f"Failed to add post to vector store: {e}")
+    
+    def _extract_relevant_snippet_semantic(self, content: str, query: str, max_length: int = 200) -> str:
+        """Extract relevant snippet using semantic similarity"""
+        # Simple approach: return beginning of content
+        # In production, you might want to chunk content and find most relevant chunks
+        if len(content) > max_length:
+            return content[:max_length] + "..."
+        return content
+    
     def _extract_relevant_snippet(self, content: str, query_words: set, max_length: int = 200) -> str:
-        """Extract a relevant snippet from content / 从内容中提取相关片段"""
-        # Find first sentence containing query words / 找到包含查询词的第一个句子
+        """Extract a relevant snippet from content"""
+        # Find first sentence containing query words
         sentences = content.split('.')
         for sentence in sentences:
             if any(word in sentence.lower() for word in query_words):
@@ -155,46 +316,46 @@ class KnowledgeBase:
                     snippet = snippet[:max_length] + "..."
                 return snippet
         
-        # If no sentence matches, return beginning / 如果没有匹配的句子，返回开头
+        # If no sentence matches, return beginning
         return content[:max_length] + "..." if len(content) > max_length else content
     
     def _generate_reason(self, post: Post, query_words: set, title_matches: int, content_matches: int) -> str:
-        """Generate reason why post is relevant / 生成文章相关的原因"""
+        """Generate reason why post is relevant"""
         reasons = []
         
         if title_matches > 0:
             matched_words = [word for word in query_words if word in post.title.lower()]
-            reasons.append(f"标题包含关键词: {', '.join(matched_words)}")
+            reasons.append(f"Title contains keywords: {', '.join(matched_words)}")
         
         if content_matches > 0:
-            reasons.append(f"内容包含 {content_matches} 个匹配的关键词")
+            reasons.append(f"Content contains {content_matches} matching keywords")
         
         if post.tags:
             matched_tags = [tag for tag in post.tags if any(word in tag.lower() for word in query_words)]
             if matched_tags:
-                reasons.append(f"标签匹配: {', '.join(matched_tags)}")
+                reasons.append(f"Tags match: {', '.join(matched_tags)}")
         
-        return "；".join(reasons) if reasons else "部分内容相关"
+        return "; ".join(reasons) if reasons else "Partially relevant content"
 
 
-# ==================== ADK Tool for Knowledge Base Search ADK 知识库搜索工具 ====================
+# ==================== ADK Tool for Knowledge Base Search ====================
 
-# Global knowledge base instance / 全局知识库实例
+# Global knowledge base instance
 _knowledge_base = KnowledgeBase()
 
 
 def search_knowledge_base(query: str, top_k: int = 3) -> Dict:
     """
-    Search the knowledge base for relevant posts / 在知识库中搜索相关文章
+    Search the knowledge base for relevant posts
     
-    This is a tool function that ADK agents can use / 这是 ADK 代理可以使用的工具函数
+    This is a tool function that ADK agents can use
     
     Args:
-        query: Search query / 搜索查询
-        top_k: Number of results to return / 返回结果数量
+        query: Search query
+        top_k: Number of results to return
     
     Returns:
-        Dictionary with search results / 包含搜索结果的字典
+        Dictionary with search results
     """
     results = _knowledge_base.search_posts(query, top_k)
     
@@ -225,16 +386,16 @@ def search_knowledge_base(query: str, top_k: int = 3) -> Dict:
 
 def add_post_to_knowledge_base(title: str, content: str, tags: List[str] = None, post_id: Optional[str] = None) -> Dict:
     """
-    Add a new post to the knowledge base / 向知识库添加新文章
+    Add a new post to the knowledge base
     
     Args:
-        title: Post title / 文章标题
-        content: Post content / 文章内容
-        tags: List of tags / 标签列表
-        post_id: Optional post ID (auto-generated if not provided) / 可选的文章 ID（如未提供则自动生成）
+        title: Post title
+        content: Post content
+        tags: List of tags
+        post_id: Optional post ID (auto-generated if not provided)
     
     Returns:
-        Dictionary with status and post info / 包含状态和文章信息的字典
+        Dictionary with status and post info
     """
     import uuid
     
@@ -258,14 +419,14 @@ def add_post_to_knowledge_base(title: str, content: str, tags: List[str] = None,
     }
 
 
-# ==================== Knowledge Base Agent 知识库代理 ====================
+# ==================== Knowledge Base Agent ====================
 
 def create_knowledge_base_agent() -> Agent:
     """
-    Create a knowledge base agent that can answer questions from posts / 创建可以从文章中回答问题的知识库代理
+    Create a knowledge base agent that can answer questions from posts
     
     Returns:
-        Agent instance configured for knowledge base queries / 配置用于知识库查询的代理实例
+        Agent instance configured for knowledge base queries
     """
     return Agent(
         model='gemini-2.0-flash-exp',
@@ -274,10 +435,6 @@ def create_knowledge_base_agent() -> Agent:
         A knowledge base assistant that answers questions by searching through posts/articles.
         If no relevant posts are found, it will say that nothing was found and cannot solve the question.
         When answering, it always shows the related posts and explains why they are relevant.
-        
-        一个知识库助手，通过搜索文章/帖子来回答问题。
-        如果找不到相关文章，它会说没有找到任何内容，无法解决问题。
-        回答时，它总是显示相关文章并解释为什么它们相关。
         """,
         instruction="""
         You are a helpful knowledge base assistant. Your job is to answer user questions by searching 
@@ -307,60 +464,33 @@ def create_knowledge_base_agent() -> Agent:
         
         Example response when nothing found:
         "I couldn't find any relevant posts to answer your question. I cannot solve this based on the available knowledge base."
-        
-        你是一个有用的知识库助手。你的工作是通过搜索可用的文章/帖子来回答用户问题。
-        
-        重要规则：
-        1. 当用户提问时，总是首先使用 search_knowledge_base 工具
-        2. 如果 search_knowledge_base 返回状态 "not_found"，你必须说：
-           "我找不到任何相关文章来回答你的问题。我无法基于现有知识库解决这个问题。"
-        3. 如果 search_knowledge_base 返回结果，你必须：
-           - 基于检索到的文章回答问题
-           - 列出所有相关文章及其标题
-           - 解释为什么每篇文章相关（使用结果中的 "reason" 字段）
-           - 引用信息时注明文章 ID
-        
-        找到文章时的响应格式示例：
-        "基于知识库，[你的回答]。
-        
-        相关文章：
-        1. [文章标题] (ID: [post_id])
-           原因：[搜索结果中的原因]
-           相关内容：[matched_content]
-        
-        2. [文章标题] (ID: [post_id])
-           原因：[搜索结果中的原因]
-           相关内容：[matched_content]"
-        
-        未找到内容时的响应示例：
-        "我找不到任何相关文章来回答你的问题。我无法基于现有知识库解决这个问题。"
         """,
         tools=[search_knowledge_base, add_post_to_knowledge_base]
     )
 
 
-# ==================== Helper Functions 辅助函数 ====================
+# ==================== Helper Functions ====================
 
 def initialize_sample_posts():
-    """Initialize knowledge base with sample posts / 用示例文章初始化知识库"""
+    """Initialize knowledge base with sample posts"""
     sample_posts = [
         Post(
             id="post_001",
-            title="Python 虚拟环境使用指南",
-            content="Python 虚拟环境是隔离项目依赖的重要工具。使用 python -m venv venv 创建虚拟环境，使用 source venv/bin/activate 激活。虚拟环境可以避免不同项目之间的依赖冲突。",
-            tags=["Python", "虚拟环境", "开发工具"]
+            title="Python Virtual Environment Guide",
+            content="Python virtual environments are essential tools for isolating project dependencies. Use 'python -m venv venv' to create a virtual environment, and 'source venv/bin/activate' to activate it. Virtual environments help avoid dependency conflicts between different projects.",
+            tags=["Python", "Virtual Environment", "Development Tools"]
         ),
         Post(
             id="post_002",
-            title="FastAPI 快速入门",
-            content="FastAPI 是一个现代、快速的 Web 框架。它基于 Python 类型提示，自动生成 API 文档。使用 @app.get() 装饰器定义路由，支持异步请求处理。",
-            tags=["FastAPI", "Python", "Web开发"]
+            title="FastAPI Quick Start",
+            content="FastAPI is a modern, fast web framework. It's based on Python type hints and automatically generates API documentation. Use the @app.get() decorator to define routes, and it supports asynchronous request handling.",
+            tags=["FastAPI", "Python", "Web Development"]
         ),
         Post(
             id="post_003",
-            title="Google ADK 代理开发",
-            content="Google ADK (Agent Development Kit) 是用于构建 AI 代理的框架。它支持自定义工具、插件和多代理系统。使用 Agent 类创建代理，通过 Runner 运行代理。",
-            tags=["Google ADK", "AI", "代理开发"]
+            title="Google ADK Agent Development",
+            content="Google ADK (Agent Development Kit) is a framework for building AI agents. It supports custom tools, plugins, and multi-agent systems. Use the Agent class to create agents, and run them through the Runner.",
+            tags=["Google ADK", "AI", "Agent Development"]
         )
     ]
     
@@ -370,7 +500,7 @@ def initialize_sample_posts():
     print(f"Initialized knowledge base with {len(sample_posts)} sample posts")
 
 
-# Initialize with sample data if knowledge base is empty / 如果知识库为空，用示例数据初始化
+# Initialize with sample data if knowledge base is empty
 if len(_knowledge_base.posts) == 0:
     initialize_sample_posts()
 
