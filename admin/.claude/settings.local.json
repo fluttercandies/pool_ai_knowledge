@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter pub get:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter build:*)",
+      "mcp__dart__list_devices",
+      "mcp__dart__launch_app",
+      "mcp__dart__list_running_apps",
+      "Bash(jobs:*)",
+      "mcp__dart__connect_dart_tooling_daemon",
+      "mcp__dart__get_runtime_errors",
+      "mcp__dart__get_widget_tree",
+      "mcp__dart__get_app_logs",
+      "mcp__dart__hot_reload"
+    ]
+  }
+}
