@@ -95,9 +95,36 @@ def get_db():
 
 
 def init_db():
-    """Initialize database tables"""
+    """Initialize database tables and create default admin user"""
     Base.metadata.create_all(bind=engine)
     print("Database tables created successfully")
+    _create_default_admin()
+
+
+def _create_default_admin():
+    """Create default admin user if none exists"""
+    from auth import get_password_hash
+
+    db = SessionLocal()
+    try:
+        existing = db.query(AdminUser).first()
+        if existing:
+            return
+        admin = AdminUser(
+            username="admin",
+            email="admin@example.com",
+            password_hash=get_password_hash("admin123456"),
+            is_super_admin=True,
+            is_active=True,
+        )
+        db.add(admin)
+        db.commit()
+        print("Default admin created (username: admin, password: admin123456)")
+    except Exception as e:
+        print(f"Warning: Failed to create default admin: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 
 def drop_db():

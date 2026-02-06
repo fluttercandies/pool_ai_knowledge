@@ -1,60 +1,29 @@
 """
 Database initialization script
-Creates tables and optionally creates a default admin user
+Creates tables and default admin user.
+
+Usage:
+    python init_db.py          - Initialize database
+    python init_db.py --reset  - Drop and recreate all tables (WARNING: destroys data)
 """
 
-from database import init_db, SessionLocal, AdminUser, APIKey
-from auth import get_password_hash
+from database import init_db, drop_db
 import sys
-
-def create_default_admin():
-    """Create default admin user if it doesn't exist"""
-    db = SessionLocal()
-    try:
-        # Check if admin exists
-        admin = db.query(AdminUser).filter(AdminUser.username == "admin").first()
-        if admin:
-            print("Default admin user already exists. Updating password...")
-            admin.password_hash = get_password_hash("123456")
-            db.commit()
-            print("Default admin user password updated to: 123456")
-            return
-        
-        # Create default admin
-        admin = AdminUser(
-            username="admin",
-            email="admin@example.com",
-            password_hash=get_password_hash("123456"),
-            is_super_admin=True,
-            is_active=True
-        )
-        db.add(admin)
-        db.commit()
-        print("Default admin user created:")
-        print("  Username: admin")
-        print("  Password: 123456")
-        print("  WARNING: Change the default password in production!")
-    except Exception as e:
-        print(f"Error creating default admin: {e}")
-        db.rollback()
-    finally:
-        db.close()
 
 
 if __name__ == "__main__":
+    if "--reset" in sys.argv:
+        print("WARNING: Dropping all tables...")
+        drop_db()
+
     print("Initializing database...")
     try:
         init_db()
-        print("Database tables created successfully")
-        
-        # Create default admin
-        create_default_admin()
-        
         print("\nDatabase initialization complete!")
-        print("\nNext steps:")
-        print("1. Update the default admin password")
-        print("2. Add API keys via admin panel: POST /api/admin/api-keys")
-        print("3. Add posts via admin panel: POST /api/admin/posts")
+        print("\nDefault admin account:")
+        print("  Username: admin")
+        print("  Password: admin123456")
+        print("  WARNING: Change the default password in production!")
     except Exception as e:
         print(f"Error initializing database: {e}")
         sys.exit(1)

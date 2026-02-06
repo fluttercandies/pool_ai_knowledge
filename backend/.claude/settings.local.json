@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(brew services:*)",
+      "Bash(pip3 list:*)",
+      "Bash(echo:*)",
+      "Bash(python3 -m pip:*)",
+      "Bash(/opt/homebrew/bin/pip3 list:*)",
+      "Bash(brew install:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(python -c:*)",
+      "Bash(uvicorn:*)",
+      "Bash(curl:*)"
+    ]
+  }
+}
