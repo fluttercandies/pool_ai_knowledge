@@ -77,7 +77,7 @@ export const constantRoutes = [
         meta: { title: '新增帖子', activeMenu: '/post/list' }
       },
       {
-        path: 'edit/:id(\\d+)',
+        path: 'edit/:id',
         component: () => import('@/views/post/edit'),
         name: 'EditPost',
         hidden: true,

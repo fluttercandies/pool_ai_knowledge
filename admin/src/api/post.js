@@ -1,11 +1,15 @@
 import request from '@/utils/request'
 
 export function fetchPostList(query) {
+  const params = {
+    skip: ((query.page || 1) - 1) * (query.limit || 20),
+    limit: query.limit || 20
+  }
   return request({
     url: '/api/admin/posts',
     method: 'get',
     baseURL: '',
-    params: query
+    params
   })
 }
 

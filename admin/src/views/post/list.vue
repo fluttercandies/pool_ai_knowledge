@@ -96,7 +96,7 @@ export default {
     getList() {
       this.listLoading = true
       fetchPostList(this.listQuery).then(response => {
-        this.list = response.data.items || []
+        this.list = response.data.posts || []
         this.total = response.data.total || 0
         this.listLoading = false
       }).catch(() => {
