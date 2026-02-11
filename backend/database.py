@@ -132,6 +132,70 @@ def _migrate_db():
                 conn.rollback()
 
 
+def _load_default_posts():
+    """Load default posts from default_posts/ directory into the database.
+
+    Each .md file uses YAML frontmatter for metadata (tags, language).
+    The filename (without extension) becomes the post title.
+    Posts are only inserted if no post with the same title already exists.
+    """
+    import uuid
+    import yaml
+
+    posts_dir = os.path.join(os.path.dirname(__file__), "default_posts")
+    if not os.path.isdir(posts_dir):
+        return
+
+    db = SessionLocal()
+    count = 0
+    try:
+        for fname in sorted(os.listdir(posts_dir)):
+            if not fname.endswith(".md"):
+                continue
+
+            title = fname[:-3]  # strip .md extension
+
+            # Skip if a post with this title already exists
+            existing = db.query(Post).filter(Post.title == title).first()
+            if existing:
+                continue
+
+            fpath = os.path.join(posts_dir, fname)
+            with open(fpath, "r", encoding="utf-8") as f:
+                raw = f.read()
+
+            # Parse YAML frontmatter
+            tags = None
+            language = "zh-CN"
+            content = raw
+            if raw.startswith("---"):
+                parts = raw.split("---", 2)
+                if len(parts) >= 3:
+                    meta = yaml.safe_load(parts[1]) or {}
+                    tags = meta.get("tags")
+                    language = meta.get("language", "zh-CN")
+                    content = parts[2].strip()
+
+            post = Post(
+                id=str(uuid.uuid4()),
+                title=title,
+                content=content,
+                tags=tags,
+                language=language,
+            )
+            db.add(post)
+            count += 1
+
+        db.commit()
+        if count:
+            print(f"Loaded {count} default post(s) from default_posts/")
+    except Exception as e:
+        db.rollback()
+        print(f"Warning: Could not load default posts: {e}")
+    finally:
+        db.close()
+
+
 def init_db():
     """Initialize database: run schema.sql, migrations, then seed.sql"""
     _run_sql_file("schema.sql")
@@ -140,6 +204,7 @@ def init_db():
     print("Database migrations applied")
     _run_sql_file("seed.sql")
     print("Seed data initialized successfully")
+    _load_default_posts()
 
 
 # Default model and available model list

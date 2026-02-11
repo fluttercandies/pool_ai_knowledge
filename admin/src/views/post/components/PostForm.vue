@@ -131,7 +131,7 @@ export default {
             duration: 2000
           })
           this.loading = false
-          this.$router.push('/post/list')
+          this.$router.replace('/redirect/post/list')
         }).catch(() => {
           this.loading = false
         })
