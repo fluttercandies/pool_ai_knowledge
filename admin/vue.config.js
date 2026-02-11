@@ -37,6 +37,12 @@ module.exports = {
       errors: true
     },
     before: require('./mock/mock-server.js'),
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true
+      }
+    },
     watchOptions: {
       poll: 1000,
       ignored: /node_modules/
