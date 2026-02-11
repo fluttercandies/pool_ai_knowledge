@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { getPost } from '../../api/posts'
+import { renderMarkdown } from '../../utils/markdown'
 
 const route = useRoute()
 const router = useRouter()
@@ -41,7 +42,7 @@ watch(locale, loadPost)
         <span class="post-date">{{ new Date(post.created_at).toLocaleDateString() }}</span>
       </div>
       <el-divider />
-      <div class="post-content" v-html="post.content?.replace(/\n/g, '<br>')"></div>
+      <div class="post-content markdown-body" v-html="renderMarkdown(post.content)"></div>
 
       <el-divider />
       <div class="chat-cta">
@@ -81,9 +82,7 @@ watch(locale, loadPost)
 }
 
 .post-content {
-  font-size: 15px;
-  line-height: 1.8;
-  color: #333;
+  margin-top: 16px;
 }
 
 .chat-cta {

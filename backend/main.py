@@ -6,13 +6,7 @@ from typing import Optional, List
 from google.adk import Runner
 from google.adk.runners import types as runner_types
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
-from adk_agents import (
-    get_agent,
-    list_agents,
-    example_calculator_usage,
-    example_search_usage,
-    example_multi_tool_usage
-)
+from adk_agents import get_agent, list_agents
 from admin_api import router as admin_router
 from web_api import router as web_router
 from database import init_db, sync_api_keys_to_env
@@ -20,8 +14,8 @@ from models import R
 
 app = FastAPI(
     title="Pool AI Knowledge API",
-    description="AI Knowledge Base API with Google ADK Agents, Admin Panel, and Web APIs",
-    version="0.2.0"
+    description="AI Knowledge Base with RAG semantic search and conversational AI",
+    version="0.3.0"
 )
 
 # Include routers
@@ -88,11 +82,9 @@ async def root():
     """Root endpoint"""
     return R.ok({
         "message": "Welcome to Pool AI Knowledge API",
-        "version": "0.2.0",
+        "version": "0.3.0",
         "endpoints": {
-            "agents": "/api/agents",
             "chat": "/api/chat",
-            "examples": "/api/examples/{agent_name}",
             "admin": "/api/admin",
             "web": "/api/web",
             "docs": "/docs"
@@ -134,32 +126,7 @@ async def get_available_agents():
     return R.ok({"agents": agent_info, "total": len(agents)})
 
 
-# Global runner instances for each agent / 每个代理的全局运行器实例
-_agent_runners: dict = {}
 _session_service = InMemorySessionService()
-
-
-def get_runner(agent_name: str) -> Optional[Runner]:
-    """
-    Get or create a runner for an agent / 获取或创建代理的运行器
-    
-    Args:
-        agent_name: Name of the agent / 代理名称
-    
-    Returns:
-        Runner instance or None / 运行器实例或 None
-    """
-    if agent_name not in _agent_runners:
-        agent = get_agent(agent_name)
-        if not agent:
-            return None
-        # Use "agents" as app_name to match where agents are loaded from / 使用 "agents" 作为 app_name 以匹配代理加载位置
-        _agent_runners[agent_name] = Runner(
-            app_name="agents",
-            agent=agent,
-            session_service=_session_service
-        )
-    return _agent_runners[agent_name]
 
 
 @app.post("/api/chat")
@@ -380,43 +347,6 @@ def _extract_response_from_events(events: List, debug: bool = False) -> dict:
             unique_refs.append(ref)
 
     return {"text": response_text, "references": unique_refs}
-
-
-@app.get("/api/examples/{agent_name}")
-async def get_agent_examples(agent_name: str):
-    """
-    Get example usage for a specific agent / 获取特定代理的示例用法
-    
-    Args:
-        agent_name: Name of the agent / 代理名称
-    
-    Returns:
-        Example usage information / 示例用法信息
-    """
-    agent = get_agent(agent_name)
-    
-    if not agent:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Agent '{agent_name}' not found. Available agents: {', '.join(list_agents())}"
-        )
-    
-    # Get examples based on agent type / 根据代理类型获取示例
-    example_functions = {
-        "calculator": example_calculator_usage,
-        "search": example_search_usage,
-        "multi": example_multi_tool_usage
-    }
-    
-    if agent_name in example_functions:
-        result = await example_functions[agent_name]()
-        return R.ok(result)
-    else:
-        return R.ok({
-            "agent": agent_name,
-            "description": agent.description,
-            "note": "Use /api/chat endpoint to interact with this agent"
-        })
 
 
 @app.get("/api/agents/{agent_name}/info")

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { chatWithAgent } from '../../api/chat'
 import { getPosts } from '../../api/posts'
+import { renderMarkdown } from '../../utils/markdown'
 
 const route = useRoute()
 const router = useRouter()
@@ -163,8 +164,14 @@ function handleKeydown(e) {
               <el-icon :size="12"><Document /></el-icon>
               {{ msg.postTitle }}
             </div>
-            <div class="message-bubble" :class="{ error: msg.error }">
-              {{ msg.content }}
+            <div
+              class="message-bubble"
+              :class="{ error: msg.error, 'markdown-body': msg.role === 'assistant' }"
+            >
+              <template v-if="msg.role === 'assistant'">
+                <div v-html="renderMarkdown(msg.content)"></div>
+              </template>
+              <template v-else>{{ msg.content }}</template>
             </div>
             <div v-if="msg.references?.length" class="message-refs">
               <el-icon :size="12"><Link /></el-icon>
@@ -355,6 +362,7 @@ function handleKeydown(e) {
   background: #f0f2f5;
   color: #333;
   border-top-left-radius: 4px;
+  white-space: normal;
 }
 
 .message-bubble.error {

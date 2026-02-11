@@ -9,7 +9,8 @@
       "Bash(/Users/zengyang/Documents/ai_pro/pool_ai_knowledge/backend/venv/bin/python:*)",
       "Bash(node -e:*)",
       "Bash(lsof:*)",
-      "Bash(ps:*)"
+      "Bash(ps:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

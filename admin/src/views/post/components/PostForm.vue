@@ -36,7 +36,7 @@
       </el-form-item>
 
       <el-form-item label="内容" prop="content">
-        <Tinymce ref="editor" v-model="postForm.content" :height="400" />
+        <MarkdownEditor v-model="postForm.content" height="400px" />
       </el-form-item>
 
       <el-form-item>
@@ -50,12 +50,12 @@
 </template>
 
 <script>
-import Tinymce from '@/components/Tinymce'
+import MarkdownEditor from '@/components/MarkdownEditor'
 import { fetchPost, createPost, updatePost } from '@/api/post'
 
 export default {
   name: 'PostForm',
-  components: { Tinymce },
+  components: { MarkdownEditor },
   props: {
     isEdit: {
       type: Boolean,
