@@ -53,13 +53,14 @@ class _TypingIndicatorState extends State<TypingIndicator>
         children: List.generate(3, (i) {
           return AnimatedBuilder(
             animation: _animations[i],
-            builder: (_, __) {
+            builder: (_, _) {
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 3),
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.3 + _animations[i].value * 0.7),
+                  color: color.withValues(
+                      alpha: 0.3 + _animations[i].value * 0.7),
                   shape: BoxShape.circle,
                 ),
               );
@@ -68,20 +69,5 @@ class _TypingIndicatorState extends State<TypingIndicator>
         }),
       ),
     );
-  }
-}
-
-class AnimatedBuilder extends AnimatedWidget {
-  final Widget Function(BuildContext, Widget?) builder;
-
-  const AnimatedBuilder({
-    super.key,
-    required super.listenable,
-    required this.builder,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return builder(context, null);
   }
 }

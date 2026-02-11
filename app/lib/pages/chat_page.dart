@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../l10n/app_strings.dart';
+import '../models/post.dart';
 import '../providers/chat_provider.dart';
 import '../providers/locale_provider.dart';
 import '../widgets/chat_bubble.dart';
@@ -207,7 +208,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     BuildContext context,
     AppStrings s,
     ChatState chatState,
-    AsyncValue<List<dynamic>> postOptions,
+    AsyncValue<List<Post>> postOptions,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -219,7 +220,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
             error: (_, _) => const SizedBox.shrink(),
             data: (posts) {
               return DropdownButtonFormField<String>(
-                value: chatState.selectedPostId,
+                initialValue: chatState.selectedPostId,
                 decoration: InputDecoration(
                   hintText: s.chatSelectPost,
                   border: OutlineInputBorder(
