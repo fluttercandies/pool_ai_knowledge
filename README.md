@@ -18,6 +18,88 @@ An open-source AI knowledge base system with RAG (Retrieval-Augmented Generation
 
 > **Status / 状态:** Under active development / 积极开发中
 
+## Screenshots / 截图
+
+### Admin Dashboard / 管理后台
+
+<p align="center">
+  <img src="screen_shots/admin_1.png" width="30%">&nbsp;
+  <img src="screen_shots/admin_2.png" width="30%">&nbsp;
+  <img src="screen_shots/admin_3.png" width="30%">
+</p>
+
+### Web - English
+
+<p align="center">
+  <img src="screen_shots/web_en_1.png" width="45%">&nbsp;
+  <img src="screen_shots/web_en_2.png" width="45%">
+</p>
+<p align="center">
+  <img src="screen_shots/web_en_3.png" width="45%">&nbsp;
+  <img src="screen_shots/web_en_4.png" width="45%">
+</p>
+
+### Web - 中文
+
+<p align="center">
+  <img src="screen_shots/web_zh-cn_1.png" width="45%">&nbsp;
+  <img src="screen_shots/web_zh-cn_2.png" width="45%">
+</p>
+<p align="center">
+  <img src="screen_shots/web_zh-cn_3.png" width="45%">&nbsp;
+  <img src="screen_shots/web_zh-cn_5.png" width="45%">
+</p>
+<p align="center">
+  <img src="screen_shots/web_zh-cn_6.png" width="45%">
+</p>
+
+### Desktop (macOS) - English
+
+<p align="center">
+  <img src="screen_shots/pc_macos_en_1.png" width="45%">&nbsp;
+  <img src="screen_shots/pc_macos_en_2.png" width="45%">
+</p>
+<p align="center">
+  <img src="screen_shots/pc_macos_en_3.png" width="45%">&nbsp;
+  <img src="screen_shots/pc_macos_en_4.png" width="45%">
+</p>
+<p align="center">
+  <img src="screen_shots/pc_macos_en_5.png" width="45%">
+</p>
+
+### Desktop (macOS) - 中文
+
+<p align="center">
+  <img src="screen_shots/pc_macos_zh-cn_1.png" width="45%">&nbsp;
+  <img src="screen_shots/pc_macos_zh-cn_2.png" width="45%">
+</p>
+<p align="center">
+  <img src="screen_shots/pc_macos_zh-cn_3.png" width="45%">&nbsp;
+  <img src="screen_shots/pc_macos_zh-cn_4.png" width="45%">
+</p>
+<p align="center">
+  <img src="screen_shots/pc_macos_zh-cn_5.png" width="45%">
+</p>
+
+### Android - English
+
+<p align="center">
+  <img src="screen_shots/app_android_en_1.jpg" width="22%">&nbsp;
+  <img src="screen_shots/app_android_en_2.jpg" width="22%">&nbsp;
+  <img src="screen_shots/app_android_en_3.jpg" width="22%">&nbsp;
+  <img src="screen_shots/app_android_en_4.jpg" width="22%">
+</p>
+
+### Android - 中文
+
+<p align="center">
+  <img src="screen_shots/app_android_zh-ch_1.jpg" width="18%">&nbsp;
+  <img src="screen_shots/app_android_zh-ch_2.jpg" width="18%">&nbsp;
+  <img src="screen_shots/app_android_zh-ch_3.jpg" width="18%">&nbsp;
+  <img src="screen_shots/app_android_zh-ch_4.jpg" width="18%">&nbsp;
+  <img src="screen_shots/app_android_zh-ch_5.jpg" width="18%">
+</p>
+
 ## Architecture / 架构
 
 ```
