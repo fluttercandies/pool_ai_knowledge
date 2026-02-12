@@ -1,10 +1,14 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
+      <el-input v-model="listQuery.search" placeholder="搜索ID、标题..." clearable style="width: 240px; margin-right: 10px;" @clear="handleFilter" @keyup.enter.native="handleFilter" />
       <el-select v-model="listQuery.language" placeholder="语言筛选" clearable style="width: 140px; margin-right: 10px;" @change="handleFilter">
         <el-option label="中文" value="zh-CN" />
         <el-option label="English" value="en" />
       </el-select>
+      <el-button type="primary" icon="el-icon-search" @click="handleFilter">
+        搜索
+      </el-button>
       <el-button type="primary" icon="el-icon-plus" @click="handleCreate">
         新增帖子
       </el-button>
@@ -98,7 +102,8 @@ export default {
       listQuery: {
         page: 1,
         limit: 20,
-        language: ''
+        language: '',
+        search: ''
       }
     }
   },

@@ -4,7 +4,8 @@ export function fetchPostList(query) {
   const params = {
     skip: ((query.page || 1) - 1) * (query.limit || 20),
     limit: query.limit || 20,
-    ...(query.language ? { language: query.language } : {})
+    ...(query.language ? { language: query.language } : {}),
+    ...(query.search ? { search: query.search } : {})
   }
   return request({
     url: '/api/admin/posts',

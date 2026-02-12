@@ -343,15 +343,20 @@ async def list_posts(
     skip: int = 0,
     limit: int = 20,
     language: Optional[str] = None,
+    search: Optional[str] = None,
     current_admin: AdminUser = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
-    """List all posts, optionally filtered by language"""
+    """List all posts, optionally filtered by language and search keyword"""
     query = db.query(Post)
     if language:
         query = query.filter(Post.language == language)
-    posts = query.offset(skip).limit(limit).all()
+    if search:
+        query = query.filter(
+            (Post.id.contains(search)) | (Post.title.contains(search)) | (Post.content.contains(search))
+        )
     total = query.count()
+    posts = query.order_by(Post.created_at.desc()).offset(skip).limit(limit).all()
 
     post_list = []
     for post in posts:
