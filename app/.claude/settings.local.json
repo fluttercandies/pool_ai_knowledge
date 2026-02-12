@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(flutter pub get:*)",
-      "Bash(flutter analyze:*)"
+      "Bash(flutter analyze:*)",
+      "Bash(gem --version:*)",
+      "Bash(pod --version:*)",
+      "Bash(sudo gem install:*)"
     ]
   }
 }

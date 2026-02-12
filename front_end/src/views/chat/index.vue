@@ -136,8 +136,8 @@ function handleKeydown(e) {
         @close="clearPostContext"
         class="context-tag"
       >
-        <el-icon><Document /></el-icon>
-        {{ t('chat.contextPrefix') }}: {{ selectedPostTitle }}
+        <el-icon class="context-tag-icon"><Document /></el-icon>
+        <span class="context-tag-text">{{ t('chat.contextPrefix') }}: {{ selectedPostTitle }}</span>
       </el-tag>
     </div>
 
@@ -241,9 +241,28 @@ function handleKeydown(e) {
 }
 
 .context-tag {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
+  max-width: 360px;
+}
+
+.context-tag :deep(.el-tag__content) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.context-tag-icon {
+  flex-shrink: 0;
+}
+
+.context-tag-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .chat-box {
