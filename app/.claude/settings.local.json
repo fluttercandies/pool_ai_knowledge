@@ -5,7 +5,8 @@
       "Bash(flutter analyze:*)",
       "Bash(gem --version:*)",
       "Bash(pod --version:*)",
-      "Bash(sudo gem install:*)"
+      "Bash(sudo gem install:*)",
+      "Bash(pod install:*)"
     ]
   }
 }
