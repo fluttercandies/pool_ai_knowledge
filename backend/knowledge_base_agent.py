@@ -143,6 +143,7 @@ class KnowledgeBase:
     
     def load_posts(self):
         """Load posts from MySQL database or JSON file"""
+        self.posts = {}
         if self.use_mysql:
             try:
                 from database import SessionLocal

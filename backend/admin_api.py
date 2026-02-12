@@ -514,4 +514,15 @@ async def delete_post(
     except Exception as e:
         print(f"Warning: Failed to update RAG vector store: {e}")
 
+    # Clear knowledge agent session so stale chat history won't affect future answers
+    try:
+        from main import _session_service
+        _session_service.delete_session_sync(
+            user_id="api_user",
+            session_id="api_knowledge",
+            app_name="agents"
+        )
+    except Exception as e:
+        print(f"Warning: Failed to clear knowledge session: {e}")
+
     return R.ok()
