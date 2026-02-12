@@ -12,9 +12,9 @@
 
 # Pool AI Knowledge
 
-An open-source AI knowledge base system with RAG (Retrieval-Augmented Generation) capabilities. It provides a full-stack solution including a Python backend, a Vue admin dashboard, and cross-platform clients for Web, Desktop (Windows/macOS/Linux), and Mobile (Android/iOS).
+An open-source AI knowledge base system with RAG (Retrieval-Augmented Generation) capabilities. It provides a full-stack solution including a Python backend, a Vue admin dashboard, and cross-platform clients for Web(Vue), Desktop (Flutter -> Windows/macOS/Linux), and Mobile (Flutter -> Android/iOS).
 
-一个开源的 AI 知识库系统，具备 RAG（检索增强生成）能力。提供完整的全栈解决方案，包括 Python 后端、Vue 管理后台，以及支持 Web、桌面端（Windows/macOS/Linux）和移动端（Android/iOS）的跨平台客户端。
+一个开源的 AI 知识库系统，具备 RAG（检索增强生成）能力。提供完整的全栈解决方案，包括 Python 后端、Vue 管理后台，以及支持 Web(Vue)、桌面端（Flutter -> Windows/macOS/Linux）和移动端（Flutter -> Android/iOS）的跨平台客户端。
 
 > **Status / 状态:** Under active development / 积极开发中
 
