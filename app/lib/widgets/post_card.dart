@@ -60,7 +60,9 @@ class PostCard extends StatelessWidget {
                       runSpacing: 4,
                       children: post.tags.take(3).map((tag) {
                         return Chip(
-                          label: Text(tag),
+                          label: Text(tag,
+                              style: TextStyle(
+                                  color: colorScheme.primary)),
                           materialTapTargetSize:
                               MaterialTapTargetSize.shrinkWrap,
                           visualDensity: VisualDensity.compact,

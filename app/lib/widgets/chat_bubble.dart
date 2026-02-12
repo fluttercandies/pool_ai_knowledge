@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/chat_message.dart';
 import '../models/chat_reference.dart';
+import '../utils/content_utils.dart';
 
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
@@ -61,7 +62,7 @@ class ChatBubble extends StatelessWidget {
                           ),
                         )
                       : MarkdownBody(
-                          data: message.content,
+                          data: prepareContent(message.content),
                           selectable: true,
                           styleSheet: MarkdownStyleSheet(
                             p: TextStyle(
@@ -117,17 +118,28 @@ class ChatBubble extends StatelessWidget {
   }
 
   Widget _buildReferences(BuildContext context, List<ChatReference> refs) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 4,
-      children: refs.map((ref) {
-        return ActionChip(
-          avatar: const Icon(Icons.article_outlined, size: 16),
-          label: Text(ref.title, style: const TextStyle(fontSize: 12)),
-          visualDensity: VisualDensity.compact,
-          onPressed: () => onReferenceTap?.call(ref.postId),
-        );
-      }).toList(),
+    final colorScheme = Theme.of(context).colorScheme;
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: refs.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final ref = refs[index];
+          return ActionChip(
+            avatar: Icon(Icons.article_outlined,
+                size: 16, color: colorScheme.primary),
+            label: Text(
+              ref.title,
+              style: TextStyle(fontSize: 12, color: colorScheme.onSurface),
+            ),
+            backgroundColor: colorScheme.surfaceContainerLow,
+            visualDensity: VisualDensity.compact,
+            onPressed: () => onReferenceTap?.call(ref.postId),
+          );
+        },
+      ),
     );
   }
 }

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_strings.dart';
 import '../providers/locale_provider.dart';
 import '../providers/post_detail_provider.dart';
+import '../utils/content_utils.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/loading_indicator.dart';
 
@@ -67,7 +68,8 @@ class PostDetailPage extends ConsumerWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   ...post.tags.map((tag) => Chip(
-                        label: Text(tag),
+                        label: Text(tag,
+                            style: TextStyle(color: colorScheme.primary)),
                         visualDensity: VisualDensity.compact,
                       )),
                   if (dateStr.isNotEmpty)
@@ -84,7 +86,7 @@ class PostDetailPage extends ConsumerWidget {
 
               // Markdown content
               MarkdownBody(
-                data: post.content,
+                data: prepareContent(post.content),
                 selectable: true,
                 styleSheet: MarkdownStyleSheet(
                   h1: Theme.of(context).textTheme.headlineMedium,

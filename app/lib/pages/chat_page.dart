@@ -24,7 +24,38 @@ class _ChatPageState extends ConsumerState<ChatPage> {
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
-  bool _initialized = false;
+  String? _appliedPostId;
+
+  @override
+  void initState() {
+    super.initState();
+    _applyInitialPost();
+  }
+
+  @override
+  void didUpdateWidget(ChatPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialPostId != widget.initialPostId) {
+      _applyInitialPost();
+    }
+  }
+
+  void _applyInitialPost() {
+    if (widget.initialPostId != null &&
+        widget.initialPostId != _appliedPostId) {
+      _appliedPostId = widget.initialPostId;
+      final title = widget.initialPostTitle != null
+          ? Uri.decodeComponent(widget.initialPostTitle!)
+          : null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref
+              .read(chatProvider.notifier)
+              .selectPost(widget.initialPostId, title);
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -60,21 +91,6 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     final chatState = ref.watch(chatProvider);
     final postOptions = ref.watch(chatPostOptionsProvider);
 
-    // Initialize post context from query params
-    if (!_initialized) {
-      _initialized = true;
-      if (widget.initialPostId != null) {
-        final title = widget.initialPostTitle != null
-            ? Uri.decodeComponent(widget.initialPostTitle!)
-            : null;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref
-              .read(chatProvider.notifier)
-              .selectPost(widget.initialPostId, title);
-        });
-      }
-    }
-
     // Auto-scroll when messages change
     ref.listen(chatProvider, (prev, next) {
       if (prev?.messages.length != next.messages.length || next.isSending) {
@@ -90,8 +106,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
         Text(
           s.chatDesc,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -119,7 +135,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                       : ListView.builder(
                           controller: _scrollController,
                           padding: const EdgeInsets.all(16),
-                          itemCount: chatState.messages.length +
+                          itemCount:
+                              chatState.messages.length +
                               (chatState.isSending ? 1 : 0),
                           itemBuilder: (context, index) {
                             if (index == chatState.messages.length) {
@@ -156,8 +173,7 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                           focusNode: _focusNode,
                           onKeyEvent: (event) {
                             if (event is KeyDownEvent &&
-                                event.logicalKey ==
-                                    LogicalKeyboardKey.enter &&
+                                event.logicalKey == LogicalKeyboardKey.enter &&
                                 !HardwareKeyboard.instance.isShiftPressed) {
                               _sendMessage();
                             }
@@ -170,7 +186,8 @@ class _ChatPageState extends ConsumerState<ChatPage> {
                             decoration: InputDecoration(
                               hintText: chatState.selectedPostTitle != null
                                   ? s.chatPlaceholderWithPost(
-                                      chatState.selectedPostTitle!)
+                                      chatState.selectedPostTitle!,
+                                    )
                                   : s.chatPlaceholder,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -210,64 +227,39 @@ class _ChatPageState extends ConsumerState<ChatPage> {
     ChatState chatState,
     AsyncValue<List<Post>> postOptions,
   ) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Row(
-      children: [
-        Expanded(
-          child: postOptions.when(
-            loading: () => const LinearProgressIndicator(),
-            error: (_, _) => const SizedBox.shrink(),
-            data: (posts) {
-              return DropdownButtonFormField<String>(
-                initialValue: chatState.selectedPostId,
-                decoration: InputDecoration(
-                  hintText: s.chatSelectPost,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  isDense: true,
-                ),
-                isExpanded: true,
-                items: posts.map((post) {
-                  return DropdownMenuItem(
-                    value: post.id,
-                    child: Text(
-                      post.title,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  );
-                }).toList(),
-                onChanged: (postId) {
-                  if (postId != null) {
-                    final post = posts.firstWhere((p) => p.id == postId);
-                    ref
-                        .read(chatProvider.notifier)
-                        .selectPost(postId, post.title);
-                  }
-                },
-              );
-            },
-          ),
-        ),
-        if (chatState.selectedPostId != null) ...[
-          const SizedBox(width: 8),
-          InputChip(
-            label: Text(
-              '${s.chatContextPrefix}: ${chatState.selectedPostTitle ?? ""}',
-              overflow: TextOverflow.ellipsis,
+    return postOptions.when(
+      loading: () => const LinearProgressIndicator(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (posts) {
+        return DropdownButtonFormField<String>(
+          key: ValueKey(chatState.selectedPostId),
+          initialValue: posts.any((p) => p.id == chatState.selectedPostId)
+              ? chatState.selectedPostId
+              : null,
+          decoration: InputDecoration(
+            hintText: s.chatSelectPost,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 10,
             ),
-            onDeleted: () {
-              ref.read(chatProvider.notifier).clearPostContext();
-            },
-            backgroundColor: colorScheme.secondaryContainer,
+            isDense: true,
           ),
-        ],
-      ],
+          isExpanded: true,
+          items: posts.map((post) {
+            return DropdownMenuItem(
+              value: post.id,
+              child: Text(post.title, overflow: TextOverflow.ellipsis),
+            );
+          }).toList(),
+          onChanged: (postId) {
+            if (postId != null) {
+              final post = posts.firstWhere((p) => p.id == postId);
+              ref.read(chatProvider.notifier).selectPost(postId, post.title);
+            }
+          },
+        );
+      },
     );
   }
 
@@ -277,21 +269,20 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.chat_bubble_outline,
-              size: 64, color: colorScheme.outline),
+          Icon(Icons.chat_bubble_outline, size: 64, color: colorScheme.outline),
           const SizedBox(height: 16),
           Text(
             s.chatEmptyHint,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
+              color: colorScheme.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
             s.chatEmptySubHint,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.outline,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colorScheme.outline),
           ),
         ],
       ),
