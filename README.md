@@ -211,6 +211,12 @@ Built with **Vue 3** + **Vite** + **Element Plus**.
 
 基于 **Vue 3** + **Vite** + **Element Plus** 构建。
 
+## Client app / App客户端
+
+Base on flutter 3.38.3.
+
+基于flutter 3.38.3 版本构建。
+
 **Key features / 核心功能：**
 - Post browsing and search / 文章浏览与搜索
 - AI chat interface (knowledge-based Q&A) / AI 对话界面（基于知识库问答）
